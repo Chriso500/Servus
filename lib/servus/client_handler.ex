@@ -44,10 +44,11 @@ defmodule Servus.ClientHandler do
             if "register" == function do
               Logger.info "Register player name #{value}"
               id = Serverutils.call("player", "put", %{nick: value})
-              Serverutils.send(state.socket, "player_registered", id)
+              Serverutils.send(state.socket, ["player", "registered"], id)
             else
-              Serverutils.send(state.socket, "error", "Unknown function: #{function}")
+              Serverutils.send(state.socket, ["player", "error"], "Unknown function: #{function}")
             end
+            run(state)
 
           {:ok, %{type: type, target: target, value: value}} ->
             if target == nil do
