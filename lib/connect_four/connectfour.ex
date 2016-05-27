@@ -1,5 +1,5 @@
 defmodule ConnectFour do
-  use Servus.Game
+  use Servus.Game, features: [:hiscore]
   require Logger
 
   alias Servus.Serverutils
@@ -52,6 +52,7 @@ defmodule ConnectFour do
           Serverutils.send(state.player1.socket, "set", slot)
 
           # Game over
+          hiscore_achieve(state.player2.id, 1, state)
           Serverutils.send(state.player2.socket, "win", nil)
           Serverutils.send(state.player1.socket, "loose", nil)
           {:next_state, :win, state}
@@ -91,6 +92,7 @@ defmodule ConnectFour do
           Serverutils.send(state.player2.socket, "set", slot)
 
           # Game over
+          hiscore_achieve(state.player1.id, 1, state)
           Serverutils.send(state.player1.socket, "win", nil)
           Serverutils.send(state.player2.socket, "loose", nil)
           {:next_state, :win, state}

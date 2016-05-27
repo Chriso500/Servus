@@ -1,4 +1,4 @@
-defmodule ServusTest do
+defmodule PlayerTest do
   use ExUnit.Case
   alias Servus.Serverutils
   alias Servus.Message
@@ -18,10 +18,7 @@ defmodule ServusTest do
   end
 
   test "integration test (TCP) for the Player Module", context do
-    # Alice joins the game by sending the 'join'
-    # message
-    assert :ok == Serverutils.send(context.alice, "join", "alice")
-
+    
     assert :ok == Serverutils.send(context.alice, ["player","register"], "Alice B. Cooper")
 
     assert(
