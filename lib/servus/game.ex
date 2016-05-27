@@ -39,31 +39,6 @@ defmodule Servus.Game do
       end
 
       defoverridable [abort: 2]
-
-      # optional Game extensions, which will be loaded and applied if requested
-      # e.g. use Servus.Game, features: [:player]
-      opts = unquote(options)
-
-      if opts[:features] do
-        if :player in opts[:features] do
-          @doc """
-          Forward all register_player events to the appropriate module (Player).
-          """
-          def handle_event({:player_register, nick}, _, state) do
-            require Logger
-            Logger.debug("Register player name #{nick}")
-            id = Servus.Serverutils.call("player", "put", %{nick: nick})
-            Serverutils.send(state.socket, "player_registered", id)
-          end
-        end
-
-        if :hiscore in opts[:features] do
-          @doc """
-          """
-          def f_mod(players) do
-          end
-        end
-      end
     end
   end
 end

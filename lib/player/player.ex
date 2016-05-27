@@ -6,7 +6,7 @@ defmodule Player do
   require Logger
 
   @config Application.get_env(:servus, :database)
-  @db "#{@config.rootpath}/player.sqlite3"
+  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
 
   register "player"
 

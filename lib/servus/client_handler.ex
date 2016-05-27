@@ -37,6 +37,18 @@ defmodule Servus.ClientHandler do
               # Store the player in the process state
               run(Map.put(state, :player, player))
             end
+
+          # How could that code reasonable refactored, so that the 
+          # client_handler doesn't know anything about the Player module?
+          {:ok, %{type: ["player", function], value: value}} ->
+            if "register" == function do
+              Logger.info "Register player name #{value}"
+              id = Serverutils.call("player", "put", %{nick: value})
+              Serverutils.send(state.socket, "player_registered", id)
+            else
+              Serverutils.send(state.socket, "error", "Unknown function: #{function}")
+            end
+
           {:ok, %{type: type, target: target, value: value}} ->
             if target == nil do
               # Generic message from client (player)

@@ -22,10 +22,17 @@ defmodule ServusTest do
     # message
     assert :ok == Serverutils.send(context.alice, "join", "alice")
 
-    assert :ok == Serverutils.send(context.alice, "player_register", "Alice B. Cooper")
+    assert :ok == Serverutils.send(context.alice, ["player","register"], "Alice B. Cooper")
 
     assert(
-      %Message{type: "player_registered", value: 0, target: nil} == 
+      %Message{type: "player_registered", value: 1, target: nil} == 
+      Serverutils.recv(context.alice, parse: true, timeout: 100)
+    )
+
+    assert :ok == Serverutils.send(context.alice, ["player","anything"], nil)
+
+    assert(
+      %Message{type: "error", value: "Unknown function: anything", target: nil} == 
       Serverutils.recv(context.alice, parse: true, timeout: 100)
     )
   end
