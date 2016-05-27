@@ -1,5 +1,5 @@
 defmodule ConnectFour do
-  use Servus.Game
+  use Servus.Game, features: [:player, :hiscore], a: :b
   require Logger
 
   alias Servus.Serverutils
