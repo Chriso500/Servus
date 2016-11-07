@@ -1,5 +1,5 @@
 defmodule PlayerTest do
-  use ExUnit.Case
+  use ExUnit.Case, seed: 0
   alias Servus.Serverutils
   alias Servus.Message
 
@@ -32,5 +32,23 @@ defmodule PlayerTest do
       %Message{type: ["player", "error"], value: "Unknown function: anything", target: nil} == 
       Serverutils.recv(context.alice, parse: true, timeout: 100)
     )
+  end
+  test "standalone test (sql-functions) for the Player Module", context do
+    
+    {tmpVar, _ } = Serverutils.call("player", "reg_with_facebook", %{facebook_name: "Test", facebook_token: "12345542", facebook_id: "XYZTT", facebook_mail: "Test@test.de"})
+    assert :ok == tmpVar
+    assert :error == Serverutils.call("player", "reg_with_facebook", %{facebook_name: "Test", facebook_token: "12345542", facebook_id: "XYZTT", facebook_mail: "Test@test.de"})
+    {tmpVar, _ } = Serverutils.call("player", "select_facebook", %{facebook_id: "XYZTT"})
+    assert :ok ==  tmpVar
+    assert {:ok, []} == Serverutils.call("player", "delete_facebook", %{facebook_id: "XYZTT"})
+    assert {:ok, []}==Serverutils.call("player", "select_facebook", %{facebook_id: "XYZTT"})
+    #NORMAL LOGINS
+    {tmpVar, _ }  = Serverutils.call("player", "reg_with_origin", %{nick: "Test", login_hash: "12345542", login_mail: "Test@test.de"})
+    assert :ok ==  tmpVar
+    :error == Serverutils.call("player", "reg_with_origin", %{nick: "Test", login_hash: "12345542", login_mail: "Test@test.de"})
+    {tmpVar, _ } = Serverutils.call("player", "select_origin", %{login_mail: "XYZTT"})
+    assert :ok ==  tmpVar
+    assert {:ok, []} == Serverutils.call("player", "delete_origin", %{login_mail: "XYZTT"})
+    assert {:ok, []}==Serverutils.call("player", "select_origin", %{login_mail: "XYZTT"})
   end
 end
