@@ -11,7 +11,7 @@ defmodule SocketServer do
   def start_link(port, queue_pid) do
     {:ok, socket} = :gen_tcp.listen(port, [
       :binary,
-      packet: 4,
+      packet: :raw,
       active: false,
       reuseaddr: true
     ])

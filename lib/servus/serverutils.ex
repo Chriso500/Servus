@@ -1,4 +1,6 @@
 defmodule Servus.Serverutils.TCP do
+
+  require Logger
   @moduledoc """
   Implementation of send/3 and recv/2 for TCP sockets
   """
@@ -32,18 +34,26 @@ defmodule Servus.Serverutils.TCP do
   returned as a `Servus.Message` struct. Otherwise the data will
   be returned as string.
   """
-  def recv(socket, opts) do
-    result = :gen_tcp.recv(socket, 0, opts[:timeout])
-    case result do
-      {:ok, data} ->
-        if opts[:parse] do
-          {:ok, msg} = Poison.decode data, as: Servus.Message
-          msg
-        else
-          result
-        end
-      _ ->
-        result
+    def recv(socket, opts) do
+    length_result = :gen_tcp.recv(socket, 4, opts[:timeout])
+    case length_result do
+    {:ok, length_binary} ->
+     <<length::integer-size(32)>> =  length_binary
+     Logger.info "Packetlänge vorrausgeschickt: #{inspect length}"
+      data_result = :gen_tcp.recv(socket, length, opts[:timeout])
+       case data_result do
+       {:ok, data} ->
+       Logger.info "JSON String des Packets: #{inspect data}"
+        #if opts[:parse] do
+          {:ok, data}
+        #else
+         # data
+        #end
+      _->
+        data_result
+      end
+    _ ->
+      length_result
     end
   end
 end
