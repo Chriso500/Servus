@@ -9,7 +9,7 @@ defmodule Echo do
     [] # Return module state here
   end
 
-  handle "echo", args, state do
+  handlep "echo", args, state do
     Logger.info "Echo module called"
     args
   end

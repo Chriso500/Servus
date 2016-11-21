@@ -13,11 +13,12 @@ defmodule Servus.ClientHandler do
   def run(state) do
     case Serverutils.recv(state.socket) do
       {:ok, message} ->
-        data = Poison.decode message, as: Servus.Message
+        data = Poison.decode(message, as: %Servus.Message {}, keys: :atoms!) 
+        Logger.info "Decode: #{inspect data}"
         case data do
-          {:ok, %{type: "join", value: name}} ->
+          {:ok, %{Type: ["join"], Value: name}} ->
             # The special `join` message
-
+            Logger.info "Join: #{inspect name}"
             # Double join?
             if Map.has_key?(state, :player) do
               Logger.warn "A player already joined on this connection"
@@ -33,24 +34,12 @@ defmodule Servus.ClientHandler do
               }
 
               PlayerQueue.push(state.queue, player)
-
               # Store the player in the process state
               run(Map.put(state, :player, player))
             end
 
-          # How could that code reasonable refactored, so that the 
-          # client_handler doesn't know anything about the Player module?
-          {:ok, %{type: ["player", function], value: value}} ->
-            if "register" == function do
-              Logger.info "Register player name #{value}"
-              id = Serverutils.call("player", "put", %{nick: value})
-              Serverutils.send(state.socket, ["player", "registered"], id)
-            else
-              Serverutils.send(state.socket, ["player", "error"], "Unknown function: #{function}")
-            end
-            run(state)
 
-          {:ok, %{type: type, target: target, value: value}} ->
+          {:ok, %{Type: type, Target: target, Value: value}} ->
             if target == nil do
               # Generic message from client (player)
 
@@ -70,23 +59,17 @@ defmodule Servus.ClientHandler do
               if pid != nil do
                 :gen_fsm.send_event(pid, {state.player.id, type, value})
               end
-
+              run(state)
             else
-
-              # Call external module
-              pid = ModuleStore.get(target)
-
-              # Check if the module is registered and available
-              # and if yes...
-              if pid != nil and Process.alive?(pid) do
-                # ...invoke a synchronous call and send the result back
-                # to the calles (client socket)
-                result = GenServer.call(pid, {type, value})
-                Serverutils.send(state.socket, target, result)
+              response = Serverutils.call(target,type,value,state)
+              Logger.info "External Module call #{inspect target} operation:#{inspect type} Response: #{inspect response}"
+              if response.result_code == :error do
+                Serverutils.send(state.socket, target, type, :error)
+              else
+                Serverutils.send(state.socket, target, type, response.result)
               end
+              run(response.state)
             end
-
-            run(state)
           _ ->
             Logger.warn "Invalid message format: #{message}"
             run(state)
@@ -109,8 +92,11 @@ defmodule Servus.ClientHandler do
             Logger.info "Removed player from pid store"
           end
         end
-
-        Logger.warn "Unexpected clientside abort"
+        Logger.warn "Unexpected clientside abort Error: #{inspect err}"
+      _ ->
+        Logger.warn "Unexpeted Return from recv func"
     end
+
   end
 end
+

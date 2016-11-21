@@ -1,3 +1,4 @@
 defmodule Servus.Message do
-  defstruct type: nil, value: nil, target: nil
+  #defstruct Type: nil, Value: nil, Target: nil
+  defstruct [:Type, :Value, :Target]
 end

@@ -3,6 +3,7 @@ defmodule Servus.Module do
   A macro for server modules. Modules can implement tasks other
   than game logic. For example storing hiscores.
   """
+  require Logger
   defmacro __using__(_) do
     quote do
       use GenServer
@@ -57,9 +58,8 @@ defmodule Servus.Module do
   a handler that is called with arguments. It takes a `state` argument
   (which may be ignored).
   """
-  defmacro handle(action, args, state, handler) do
+  defmacro handle(action, args, client, state, handler) do
     handler_impl = Keyword.get(handler, :do, nil)
- 
     # Normalize state
     # (let the user ignore the state with _ if he wants)
     state = case state do
@@ -68,9 +68,19 @@ defmodule Servus.Module do
     end
 
     quote do
-      def handle_call({unquote(action), unquote(args)}, _from, unquote(state)) do
-        result = (unquote(handler_impl))
-        {:reply, result, unquote(state)}
+      def handle_call({unquote(action), unquote(args), unquote(client)}, _from, unquote(state)) do
+        result = unquote(handler_impl)
+        case result do
+          # Resultcode handling and custom state changes e.g. add player / add friends etc....
+          %{result_code: _, result: _ , state: _} ->
+            {:reply, result, unquote(state)}
+          # Result handling but no change for state... entry state will be added
+          %{result_code: _, result: _ } ->
+            {:reply, %{result_code: result.result_code, result: result.result,  state: unquote(client)}, unquote(state)}
+          _->
+            #Default if no resultcode ist given --> Asume that action is always ok because of no explicit resultcode handling and entry sate will be added
+            {:reply, %{result_code: :ok, result: result,  state: unquote(client)}, unquote(state)}
+        end
       end
     end
   end
@@ -84,7 +94,6 @@ defmodule Servus.Module do
   """
   defmacro handlep(action, args, state, handler) do
     handler_impl = Keyword.get(handler, :do, nil)
- 
     # Normalize state
     # (let the user ignore the state with _ if he wants)
     state = case state do

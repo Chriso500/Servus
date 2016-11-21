@@ -3,7 +3,7 @@ use Mix.Config
 # Base config
 config :servus,
   backends: [:connect_four],
-  modules: [Echo, HiScore, Player]
+  modules: [Player_Self, Player_Only]
 
 # Configuration for a connect-four game
 config :servus,
