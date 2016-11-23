@@ -51,6 +51,7 @@ require Logger
     assert %{Value: true, Target: _ , Type: _} = data
     #Start Game
     assert :ok == Serverutils.send(context.alice, ["join"],nil)
+    :timer.sleep(500)
     assert :ok == Serverutils.send(context.bob, ["join"],nil)
     #Recv Game Start from BOB
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
