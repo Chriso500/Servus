@@ -51,10 +51,12 @@ defmodule ConnectFour do
           # Send the final move to the loosingn player
           Serverutils.send(state.player1.socket, "set", slot)
 
-          # Game over
-          hiscore_achieve(state.player2.id, 1, state)
           Serverutils.send(state.player2.socket, "win", nil)
           Serverutils.send(state.player1.socket, "loose", nil)
+          # Game over
+          Logger.info "Player #{state.player2.id} achieved score 1"
+          Servus.Serverutils.callp("hiscore", "put", %{module: "ConnectFour", player: state.player2.id, score: 1})
+          Servus.Serverutils.send(state.player2.socket, ["hiscore", "achieved"], 1)
           {:next_state, :win, state}
         else
           #No win yet
@@ -76,6 +78,9 @@ defmodule ConnectFour do
     {:next_state, :p2, state}
   end
 
+  def hiscore_achieve(player, score, state) do
+
+  end
   @doc """
   FSM is in state `p1`. Player 1 puts.
   Outcome: p2 state
@@ -91,10 +96,12 @@ defmodule ConnectFour do
           # Set the final move to the loosing player
           Serverutils.send(state.player2.socket, "set", slot)
 
-          # Game over
-          hiscore_achieve(state.player1.id, 1, state)
           Serverutils.send(state.player1.socket, "win", nil)
           Serverutils.send(state.player2.socket, "loose", nil)
+          # Game over
+          Logger.info "Player #{state.player1.id} achieved score 1"
+          Servus.Serverutils.callp("hiscore", "put", %{module: "ConnectFour", player: state.player1.id, score: 1})
+          Servus.Serverutils.send(state.player1.socket, ["hiscore", "achieved"], 1)
           {:next_state, :win, state}
         else
           #No win yet

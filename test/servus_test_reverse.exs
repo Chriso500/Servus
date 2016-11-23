@@ -1,22 +1,35 @@
-defmodule ServusWSTest do
+defmodule ServusTest do
   use ExUnit.Case
   alias Servus.Serverutils
   alias Servus.Message
-  alias Socket.Web
+require Logger
 
   setup_all do
-    socket_alice = Web.connect! "localhost", 3335
-    socket_bob = Web.connect! "localhost", 3335
+    connect_opts = [
+      :binary,
+      packet: :raw,
+      active: false,
+      reuseaddr: true
+    ]
 
+    {:ok, socket_alice} = :gen_tcp.connect('localhost', 3334, connect_opts)
+    {:ok, socket_bob} = :gen_tcp.connect('localhost', 3334, connect_opts)
     {:ok, [
-      alice: %{raw: socket_alice, type: :web, socket: socket_alice},
-      bob: %{raw: socket_bob, type: :web, socket: socket_bob}
+      alice: %{raw: socket_alice, type: :tcp, socket: socket_alice},
+      bob: %{raw: socket_bob, type: :tcp, socket: socket_bob}
     ]}
   end
 
-  test "integration test (WebSocket)", context do
-   
-    assert :ok == Serverutils.send(context.alice,["player", "only"], ["register"], %{nick: "John Doe"})
+
+
+
+  test "integration test (TCP) for the Game Con4 player 2 Wins", context do
+    # Alice joins the game by sending the 'join'
+    # message
+
+    #assert :ok == Serverutils.send(context.alice, ["player","register"], "Alice B. Cooper")
+    #Create Account
+    assert :ok == Serverutils.send(context.alice,["player", "only"], ["register"], %{nick: "John Doe2"})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: %{id: id, key: key}, Target: _ , Type: _} = data
@@ -27,7 +40,7 @@ defmodule ServusWSTest do
     assert %{Value: true, Target: _ , Type: _} = data    
 
     #Create Second Account
-    assert :ok == Serverutils.send(context.bob,["player", "only"], ["register"], %{nick: "Jane Doe"})
+    assert :ok == Serverutils.send(context.bob,["player", "only"], ["register"], %{nick: "Jane Doe2"})
     assert {:ok , returnMessage} = Serverutils.recv(context.bob)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: %{id: id, key: key}, Target: _ , Type: _} = data
@@ -42,11 +55,11 @@ defmodule ServusWSTest do
     #Recv Game Start from BOB
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
-    assert %Message{Type: "start", Value: "Jane Doe", Target: nil} ==  data
+    assert %Message{Type: "start", Value: "Jane Doe2", Target: nil} ==  data
     #Recv Game Start from Allice
     assert {:ok , returnMessage} = Serverutils.recv(context.bob)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
-    assert %Message{Type: "start", Value: "John Doe", Target: nil} ==  data
+    assert %Message{Type: "start", Value: "John Doe2", Target: nil} ==  data
    
 
 
@@ -58,16 +71,20 @@ defmodule ServusWSTest do
     turn(context.alice, context.bob, 4)
     turn(context.bob, context.alice, 5)
     turn(context.alice, context.bob, 7)
-    turn(context.bob, context.alice, 6)
-    turn(context.alice, context.bob, 7)
-
-    assert {:ok , returnMessage} = Serverutils.recv(context.alice)
-    assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
-    assert %Message{Type: "win", Value: nil, Target: nil} ==  data
+    turn(context.bob, context.alice, 5)
+    turn(context.alice, context.bob, 4)
+    turn(context.bob, context.alice, 5)
+    turn(context.alice, context.bob, 4)
+    turn(context.bob, context.alice, 5)
 
     assert {:ok , returnMessage} = Serverutils.recv(context.bob)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
+    assert %Message{Type: "win", Value: nil, Target: nil} ==  data
+
+    assert {:ok , returnMessage} = Serverutils.recv(context.alice)
+    assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %Message{Type: "loose", Value: nil, Target: nil} ==  data
+
 
   end
 

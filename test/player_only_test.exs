@@ -22,24 +22,24 @@ defmodule PlayerOnlyTest do
     assert :ok == Serverutils.send(context.alice,["player", "only"], ["register"], %{nick: "John Doe"})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
-    assert %{Value: %{id: 1, key: key}, Target: _ , Type: _} = data
+    assert %{Value: %{id: id, key: key}, Target: _ , Type: _} = data
     #Login test with new account
-    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 1, key: key})
+    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: id, key: key})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: true, Target: _ , Type: _} = data
     #Login test with new account but wrong id
-    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 2, key: key})
+    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 6000, key: key})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: false, Target: _ , Type: _} = data
     #Login test with new account but wrong key
-    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 1, key: "WRONG"})
+    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: id, key: "WRONG"})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: false, Target: _ , Type: _} = data
     #Login test with new account but wrong id and key
-    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 2, key: "WRONG"})
+    assert :ok == Serverutils.send(context.alice, ["player", "only"], ["login"], %{id: 6000, key: "WRONG"})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
     assert %{Value: false, Target: _ , Type: _} = data
@@ -47,14 +47,14 @@ defmodule PlayerOnlyTest do
 
   test "standalone test (sql-functions) for the Player Only Module", context do
     #Register new Account
-    assert %{result: %{id: 2, key: key}, result_code: :ok, state: nil}=Serverutils.call(["player", "only"], ["register"], %{nick: "Jane Doe"},nil)
+    assert %{result: %{id: id, key: key}, result_code: :ok, state: nil}=Serverutils.call(["player", "only"], ["register"], %{nick: "Jane Doe"},nil)
     #Login with new account
-    assert %{result: true, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 2 , key: key},context.alice)
-    #Login test with new account but wrong id
-    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 2 , key: "Dummy"},context.alice)
+    assert %{result: true, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: id , key: key},context.alice)
     #Login test with new account but wrong key
-    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 3 , key: key},context.alice)
+    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: id , key: "Dummy"},context.alice)
+    #Login test with new account but wrong id
+    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 6000 , key: key},context.alice)
     #Login test with new account but wrong id and key
-    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 3 , key: "Dummy"},context.alice)
+    assert %{result: false, result_code: :ok, state: _}=Serverutils.call(["player", "only"], ["login"], %{id: 6000 , key: "Dummy"},context.alice)
   end
 end

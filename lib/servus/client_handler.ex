@@ -16,29 +16,12 @@ defmodule Servus.ClientHandler do
         data = Poison.decode(message, as: %Servus.Message {}, keys: :atoms!) 
         Logger.info "Decode: #{inspect data}"
         case data do
-          {:ok, %{Type: ["join"], Value: name}} ->
-            # The special `join` message
-            Logger.info "Join: #{inspect name}"
-            # Double join?
+          {:ok, %{Type: ["join"]}} ->
             if Map.has_key?(state, :player) do
-              Logger.warn "A player already joined on this connection"
-              run(state)
-            else
-              Logger.info "#{name} has joined the queue"
-
-              # Create a new player and add it to the queue
-              player = %{
-                name: name, 
-                socket: state.socket, 
-                id: Serverutils.get_unique_id
-              }
-
-              PlayerQueue.push(state.queue, player)
-              # Store the player in the process state
-              run(Map.put(state, :player, player))
+               PlayerQueue.push(state.queue, state.player)
+               Logger.info "#{state.player.name} has joined the queue"
             end
-
-
+            run(state)
           {:ok, %{Type: type, Target: target, Value: value}} ->
             if target == nil do
               # Generic message from client (player)
