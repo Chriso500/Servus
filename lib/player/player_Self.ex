@@ -3,10 +3,12 @@ defmodule Player_Self do
   
   """  
   alias Servus.Serverutils
+  alias Servus.SQLLITE_DB_Helper
   use Servus.Module 
   require Logger
 
   @config Application.get_env(:servus, :database)
+
   @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
 
   register ["player","self"]
@@ -16,9 +18,11 @@ defmodule Player_Self do
 
     {:ok, db} = Sqlitex.Server.start_link(@db)
 
-    case Sqlitex.Server.exec(db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT ,  internalPlayerKey TEXT, email TEXT UNIQUE, passwortMD5Hash Text, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players created"
-      {:error, {:sqlite_error, 'table players  already exists'}} -> Logger.info "Table players already exists"
+    case Sqlitex.Server.exec(db, "CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT ,  internalPlayerKey TEXT, email TEXT UNIQUE, passwortMD5Hash Text, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
+      :ok -> Logger.info "Table players created Self"
+      {:error, {:sqlite_error, 'table players already exists'}} -> 
+        Logger.info "Table players already exists. Adding new Columns"
+        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "email", columnType: "TEXT" },%{columnName: "passwortMD5Hash", columnType: "TEXT" }],"Players")
     end
 
     %{db: db} # Return module state here - db pid is used in handles

@@ -7,8 +7,8 @@ defmodule Player_Only do
   require Logger
 
   @config Application.get_env(:servus, :database)
-  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
 
+  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
   register ["player","only"]
 
   def startup do
@@ -16,13 +16,15 @@ defmodule Player_Only do
 
     {:ok, db} = Sqlitex.Server.start_link(@db)
 
-    case Sqlitex.Server.exec(db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT,  internalPlayerKey TEXT, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players created"
-      {:error, {:sqlite_error, 'table players  already exists'}} -> Logger.info "Table players already exists"
+    case Sqlitex.Server.exec(db, "CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT,  internalPlayerKey TEXT, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
+      :ok -> Logger.info "Table players created Only"
+      {:error, {:sqlite_error, 'table players already exists'}} -> 
+        Logger.info "Table players already exists"
     end
 
     %{db: db} # Return module state here - db pid is used in handles
   end
+
 
   handle ["register"], %{nick: _} = args , client, state do
     playerKey = Serverutils.get_unique_id 
@@ -67,4 +69,5 @@ defmodule Player_Only do
         %{result_code: :error, result: nil}
     end
   end
+
 end
