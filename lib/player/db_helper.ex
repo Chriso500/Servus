@@ -13,7 +13,7 @@ defmodule Servus.SQLLITE_DB_Helper do
         columnsAvaible = Enum.map result, fn(x) -> x[:name] end
         columnNameHelper(columnsAvaible,columnsCheck,db,table)
       _->
-        Logger.info "ERROR Checking PRAGMA from Table #{table}"
+        Logger.error "ERROR Checking PRAGMA from Table #{table}"
     end
   end
   @doc """
@@ -36,7 +36,7 @@ defmodule Servus.SQLLITE_DB_Helper do
         case Sqlitex.Server.exec(db, "ALTER TABLE #{table} ADD COLUMN #{x.columnName} #{x.columnType}") do
           :ok -> Logger.info "Table #{table} added missing column #{x.columnName}"
           _-> 
-            Logger.info "Error Table #{table} adding missing column #{x.columnName}"
+            Logger.error "Error Table #{table} adding missing column #{x.columnName}"
         end
       end
     end)

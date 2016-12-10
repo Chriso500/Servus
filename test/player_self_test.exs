@@ -17,7 +17,7 @@ defmodule PlayerSelfTest do
     ]}
   end
 
-  test "integration test (TCP) for the Player Only Module with register and login", context do
+  test "integration test (TCP) for the Player Self Module with register and login", context do
     #Register new Account
     assert :ok == Serverutils.send(context.alice,["player", "self"], ["register"], %{nick: "John Doe", email: "test@test.com", password: "Hello1234!"})
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
@@ -45,7 +45,7 @@ defmodule PlayerSelfTest do
     assert %{Value: false, Target: _ , Type: _} = data
   end
 
-  test "standalone test (sql-functions) for the Player Only Module", context do
+  test "standalone test (sql-functions) for the Player Self Module", context do
     #Register new Account
     assert %{result: %{id: 2}, result_code: :ok, state: nil}=Serverutils.call(["player", "self"], ["register"], %{nick: "Jane Doe", email: "test2@test.com", password: "Hello1234!"},nil)
     #Login with new account

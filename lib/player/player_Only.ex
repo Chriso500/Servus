@@ -11,6 +11,10 @@ defmodule Player_Only do
   @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
   register ["player","only"]
 
+  @doc """
+   Create SQL DB Connection
+   Create Table Players @ Startup if needed
+  """
   def startup do
     Logger.info "Player module registered: #{@db}"
 
@@ -25,7 +29,10 @@ defmodule Player_Only do
     %{db: db} # Return module state here - db pid is used in handles
   end
 
-
+  @doc """
+   Register new Client with nickanme 
+   Returns unique key and id for Logins etc --> Key should be saved in APP
+  """
   handle ["register"], %{nick: _} = args , client, state do
     playerKey = Serverutils.get_unique_id 
     insert_stmt = "INSERT INTO players(nickname,internalPlayerKey) VALUES ('#{args.nick}','#{playerKey}')"
@@ -35,6 +42,9 @@ defmodule Player_Only do
         {:ok, [result]}  ->
           Logger.info "Create new player #{args.nick} with id #{result[:id]} and key #{playerKey}"
           %{result_code: :ok, result: %{id: result[:id], key: playerKey}}
+        {:error, {:sqlite_error, error}} -> 
+          Logger.info "SQL ERROR Happend: #{inspect error}"
+          %{result_code: :error, result: error}
         _ ->
           %{result_code: :error, result: nil}
       end
@@ -43,6 +53,10 @@ defmodule Player_Only do
     end
   end
 
+  @doc """
+    Login with given ID(Account) and key --> From Register Process
+    Creates Playerobj for Mainloop.
+  """
   handle ["login"], %{id: _, key: _} = args , client, state do
     Logger.info "Player module login_only id #{args.id} and key #{args.key}"
     select_stmt = "Select count(*)as anzahl, nickname, id  FROM players  where id = #{args.id} and internalPlayerKey= '#{args.key}'"
