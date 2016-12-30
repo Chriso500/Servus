@@ -2,6 +2,8 @@ defmodule Player_FB do
   @moduledoc """
   
   """
+  alias Servus.Serverutils
+  alias Servus.SQLLITE_DB_Helper
   use Servus.Module 
   require Logger
 
@@ -20,11 +22,11 @@ defmodule Player_FB do
 
     {:ok, db} = Sqlitex.Server.start_link(@db)
 
-    case Sqlitex.Server.exec(db, "CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT, internalPlayerKey TEXT, facebook_token TEXT, facebook_id TEXT UNIQUE, login_email TEXT UNIQUE,facebook_token_expires NUMBER, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players created"
-      {:error, {:sqlite_error, 'table players  already exists'}} -> 
+    case Sqlitex.Server.exec(db, "CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT, internalPlayerKey TEXT, facebook_token TEXT, facebook_id TEXT UNIQUE, login_email TEXT UNIQUE,facebook_token_expires NUMBER, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
+      :ok -> Logger.info "Table players created FB"
+      {:error, {:sqlite_error, 'table players already exists'}} -> 
         Logger.info "Table players already exists. Adding new Login Facebook Columns if needed"
-        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "facebook_token", columnType: "TEXT" },%{columnName: "facebook_id", columnType: "TEXT UNIQUE" },%{columnName: "login_email", columnType: "TEXT UNIQUE" },%{columnName: "facebook_token_expires", columnType: "NUMBER" }],"players")
+        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "facebook_token", columnType: "TEXT" },%{columnName: "facebook_id", columnType: "TEXT", constraint: "UNIQUE"},%{columnName: "login_email", columnType: "TEXT UNIQUE" },%{columnName: "facebook_token_expires", columnType: "NUMBER" }],"Players")
     end
 
     %{db: db} # Return module state here - db pid is used in handles
