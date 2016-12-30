@@ -26,7 +26,7 @@ defmodule Player_Self do
       :ok -> Logger.info "Table players created Self"
       {:error, {:sqlite_error, 'table players already exists'}} -> 
         Logger.info "Table players already exists. Adding new Login Email Columns if needed"
-        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "login_email", columnType: "TEXT UNIQUE" },%{columnName: "passwortMD5Hash", columnType: "TEXT" }],"Players")
+        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "login_email", columnType: "TEXT", constraint: "UNIQUE"},%{columnName: "passwortMD5Hash", columnType: "TEXT" }],"Players")
     end
 
     %{db: db} # Return module state here - db pid is used in handles
