@@ -3,7 +3,7 @@ use Mix.Config
 # Base config
 config :servus,
   backends: [:connect_four],
-  modules: [Player_Self, Player_Only, HiScore, Player_FB]
+  modules: [Player_Self, Player_Only, HiScore, Player_FB,Player_Userdata]
 
 # Configuration for a connect-four game
 config :servus,
@@ -29,5 +29,10 @@ facebook: %{
   app_secret: "0b2b0ff3fde4bbe08fe58cd012904427"
 }
 
+
+config :servus,
+player_userdata: %{
+  picturepath: "./save/picture"
+}
 
 import_config "#{Mix.env}.exs"
