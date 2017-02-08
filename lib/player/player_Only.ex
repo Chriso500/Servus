@@ -69,6 +69,7 @@ defmodule Player_Only do
                     name: result[:nickname],
                     #Right place for Socket .. Not Sure
                     socket: client.socket, 
+                    login_type: :key,
                     id: result[:id]
                   }
           Logger.info "Login new player #{result[:nickname]} with id #{result[:id]}"

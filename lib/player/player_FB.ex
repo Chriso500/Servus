@@ -9,6 +9,7 @@ defmodule Player_FB do
 
   @config Application.get_env(:servus, :database)
   @configFB Application.get_env(:servus, :facebook)
+  @configPUD Application.get_env(:servus, :player_userdata)
   #No Testmode memory for player
   @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
   register ["player","fb"]
@@ -38,6 +39,7 @@ defmodule Player_FB do
   """
   defp checkFBID(fb_id, token) do
     ffb_response = HTTPotion.get "https://graph.facebook.com/me?fields=id&access_token=#{token}"
+    Logger.info "https://graph.facebook.com/me?fields=id&access_token=#{token}"
     Logger.info "Facebook response to token #{token} response #{ffb_response.body}"
     case ffb_response do
      %{body: body, headers: ffb_id , status_code: statCode}  ->
@@ -129,18 +131,51 @@ defmodule Player_FB do
   end
   @doc """
    Run Facebook me to get clientinformation like name and mail
+   if id is not null then update the database with the new picture
   """
-  defp facebookME(token) do
-    ffb_response = HTTPotion.get "https://graph.facebook.com/me?fields=name,email&access_token=#{token}"
+  defp facebookME(token,id,state) do
+    ffb_response = HTTPotion.get "https://graph.facebook.com/me?fields=name,email,picture&access_token=#{token}"
     Logger.info "Facebook ME response to token #{token} response #{ffb_response.body}"
     case ffb_response do
-     %{body: body, headers: ffb_id , status_code: statCode}  ->
+     %{body: body, headers: _ , status_code: _}  ->
       try do
         poison_data = Poison.decode(body, keys: :atoms) 
         case poison_data do
           {:ok, data} ->
             Logger.info "Facebook ME was sucessful #{inspect data}"
-            {:ok, data} 
+            if id == nil do
+              #no update of database
+              {:ok, data} 
+            else 
+              picture_response = HTTPotion.get data.picture.data.url
+              case picture_response do
+                  %{body: body, headers: _ , status_code: _}  ->
+                  insert_stmt = "insert or replace into player_userdata(id,mainpicture) VALUES (#{id},'main_#{id}')"        
+                  case Sqlitex.Server.exec(state.db, insert_stmt) do 
+                    :ok ->
+                      case File.open "#{@configPUD.picturepath}/main_#{id}", [:write] do
+                        {:ok, file} ->
+                          IO.binwrite file,body
+                          File.close file
+                          {:ok, %{data: data,picture: body}}
+                        _->
+                           Logger.info "Other Error: Filewriting?!?"
+                          %{result_code: :error, result: nil}
+                      end
+
+                      
+                    {:error, {:sqlite_error, error}} -> 
+                      Logger.info "SQL ERROR Happend: #{inspect error}"
+                      %{result_code: :error, result: error}
+                    _->
+                      Logger.info "Other Error?!?"
+                      %{result_code: :error, result: nil}
+                  end
+              _->
+                Logger.info "Problem FB picture loading #{inspect picture_response}"
+                :wrongFB
+              end
+            end
           _->
             Logger.info "Problem with Json interpretation #{inspect poison_data}"
             :wrongFB
@@ -200,7 +235,7 @@ defmodule Player_FB do
     fb_resp = checkRequestToken(fb_resp,args.token)
     case fb_resp do
       %{result: :ok, access_token: access_token, expires_at: expires_at } ->
-        fb_me_resp = facebookME(access_token)
+        fb_me_resp = facebookME(access_token,nil,nil)
         case fb_me_resp do
           {:ok, data} ->
           insert_stmt = "INSERT INTO players(nickname,login_email,facebook_id,facebook_token,facebook_token_expires) VALUES ('#{data.name}','#{data.email}','#{args.fb_id}', '#{access_token}', #{expires_at})"        
@@ -208,6 +243,7 @@ defmodule Player_FB do
             :ok ->
               case Sqlitex.Server.query(state.db, "SELECT last_insert_rowid() as id") do
                 {:ok, [result]}  ->
+                  facebookME(access_token,result[:id],state)
                   Logger.info "Create new player #{data.name} with id #{result[:id]} and mail #{data.email} and facebook_id #{args.fb_id} and token #{access_token} expires_at #{expires_at}"
                   %{result_code: :ok, result: %{id: result[:id], newToken: access_token}}
                 _ ->
@@ -262,6 +298,7 @@ defmodule Player_FB do
                       name: result[:nickname],
                       #Right place for Socket .. Not Sure
                       socket: client.socket, 
+                      login_type: :facebook,
                       id: result[:id]
                     }
             Logger.info "Login new player #{result[:nickname]} with id #{result[:id]}"
@@ -287,4 +324,3 @@ defmodule Player_FB do
   end
 
 end
-

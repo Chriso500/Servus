@@ -27,7 +27,7 @@ defmodule Servus.Serverutils.TCP do
     byte_to_send = <<send_size::integer-size(32)>>
     Logger.info "Send TCP Size: #{inspect send_size}"
     :gen_tcp.send socket, byte_to_send
-    Logger.info "Send TCP JSON: #{inspect json}"
+    #Logger.info "Send TCP JSON: #{inspect json}"
     :gen_tcp.send socket, json
   end
 
@@ -45,7 +45,7 @@ defmodule Servus.Serverutils.TCP do
     byte_to_send = <<send_size::integer-size(32)>>
     Logger.info "Send TCP Size: #{inspect send_size}"
     :gen_tcp.send socket, byte_to_send
-    Logger.info "Send TCP JSON: #{inspect json}"
+    #Logger.info "Send TCP JSON: #{inspect json}"
     :gen_tcp.send socket, json
   end
 
@@ -64,6 +64,10 @@ defmodule Servus.Serverutils.TCP do
          Logger.info "Recieve size: #{inspect length}"
           data_result = :gen_tcp.recv(socket, length, opts[:timeout])
           Logger.info "Recive TCP JSON: #{inspect data_result}"
+          #z = :zlib.open()
+          #uncompressed = :zlib.inflate(z,data_result)
+         #:zlib.close(z)
+          #uncompressed
           data_result
       _ ->
         length_result

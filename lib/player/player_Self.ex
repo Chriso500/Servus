@@ -71,9 +71,10 @@ defmodule Player_Self do
                     name: result[:nickname],
                     #Right place for Socket .. Not Sure
                     socket: client.socket, 
+                    login_type: :self,
                     id: result[:id]
                   }
-          Logger.info "Create new player #{result[:nickname]} with id #{result[:anzahl]}"
+          Logger.info "Login new player #{result[:nickname]} with id #{result[:id]}"
           %{result_code: :ok, result: true,  state: Map.put(client, :player, player)}
        else
           %{result_code: :ok, result: false}
