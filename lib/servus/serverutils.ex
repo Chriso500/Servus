@@ -41,12 +41,30 @@ defmodule Servus.Serverutils.TCP do
       Type: type,
       Value: value
     }
+
+    #z = :zlib.open()
+    #:zlib.deflateInit(z)
+    #Logger.info "1_z: #{inspect json2}"
+    #json = :zlib.deflate(z,json2,:finish)
+    #Logger.info "2_z: #{inspect json}"
+    #:zlib.close(z)
+    #send_size = byte_size(hd(json))
+    #byte_to_send = <<send_size::integer-size(32)>>
+    #Logger.info "Send TCP Size: #{inspect send_size}"
+    #Logger.info "#{inspect socket}"
+    #:gen_tcp.send socket, byte_to_send
+    #Logger.info "Send TCP JSON: #{inspect json}"
+    #:gen_tcp.send socket, json
+
+
     send_size = byte_size(json)
     byte_to_send = <<send_size::integer-size(32)>>
     Logger.info "Send TCP Size: #{inspect send_size}"
+    Logger.info "#{inspect socket}"
     :gen_tcp.send socket, byte_to_send
-    #Logger.info "Send TCP JSON: #{inspect json}"
+    Logger.info "Send TCP JSON: #{inspect json}"
     :gen_tcp.send socket, json
+
   end
 
   @doc """
@@ -65,6 +83,7 @@ defmodule Servus.Serverutils.TCP do
           data_result = :gen_tcp.recv(socket, length, opts[:timeout])
           Logger.info "Recive TCP JSON: #{inspect data_result}"
           #z = :zlib.open()
+          #:zlib.inflateInit(z)
           #uncompressed = :zlib.inflate(z,data_result)
          #:zlib.close(z)
           #uncompressed
