@@ -38,7 +38,8 @@ defmodule Player_FB do
    if token is valid check if id from request and id from functioncall are equal
   """
   defp checkFBID(fb_id, token) do
-    ffb_response = HTTPotion.get "https://graph.facebook.com/me?fields=id&access_token=#{token}"
+    Logger.info "https://graph.facebook.com/me?fields=id&access_token=#{token}"
+    ffb_response = HTTPotion.get "https://graph.facebook.com/v2.5/me?fields=id&access_token=#{token}"
     Logger.info "https://graph.facebook.com/me?fields=id&access_token=#{token}"
     Logger.info "Facebook response to token #{token} response #{ffb_response.body}"
     case ffb_response do
@@ -247,6 +248,7 @@ defmodule Player_FB do
                   Logger.info "Create new player #{data.name} with id #{result[:id]} and mail #{data.email} and facebook_id #{args.fb_id} and token #{access_token} expires_at #{expires_at}"
                   %{result_code: :ok, result: %{id: result[:id], newToken: access_token}}
                 _ ->
+                  Logger.info "Error Unkown new player #{data.name}  mail #{data.email} and facebook_id #{args.fb_id} and token #{access_token} expires_at #{expires_at}"
                   %{result_code: :error, result: nil}
               end
             {:error, {:constraint, constraint}} ->

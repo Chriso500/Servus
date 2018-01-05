@@ -13,39 +13,41 @@ defmodule Servus.ClientHandler do
   def run(state) do
     case Serverutils.recv(state.socket) do
       {:ok, message} ->
-        data = Poison.decode(message, as: %Servus.Message {}, keys: :atoms!) 
+        data = Poison.decode(message, as: %Servus.Message {}, keys: :atoms) 
         Logger.info "Decode: #{inspect data}"
         case data do
-          {:ok, %{Type: ["join"]}} ->
+          {:ok, %{Type: ["join"], Value: %{GameName: cardGame, GameMode: normal} }} ->
             if Map.has_key?(state, :player) do
-               PlayerQueue.push(state.queue, state.player)
-               Logger.info "#{state.player.name} has joined the queue"
+              Logger.info "#{state.player.name} has joined the queue"
+              PlayerQueue.push(state.queue, state.player)
+            end
+            run(state)
+           {:ok, %{Type: ["join"]}} ->
+            if Map.has_key?(state, :player) do
+              Logger.info "#{state.player.name} has joined the queue"
+              PlayerQueue.push(state.queue, state.player)
             end
             run(state)
           {:ok, %{Type: type, Target: target, Value: value}} ->
             if target == nil do
-              # Generic message from client (player)
-
-              # Check if the game state machine has already been started
-              # by querying it's pid from the PidStore. This is only
-              # required if it's not already stored in the process state
-              if not Map.has_key?(state, :fsm) do
-                pid = PidStore.get(state.player.id)
-                if pid != nil do
-                  state = Map.put(state, :fsm, pid)
+                try do
+                  if not Map.has_key?(state, :fsm) do
+                    pid = PidStore.get(state.player.id)
+                    if pid != nil do
+                      state = Map.put(state, :fsm, pid)
+                    end
+                  end
+                  pid = state.fsm
+                  :gen_fsm.send_event(pid, {state.player.id, type, value})
+                rescue
+                   e in _ -> 
+                   Logger.error "External Game call not found and not queued operation: #{inspect type}"
                 end
-              end
-
-              # Try to get the pid of the game state machine and send
-              # the command
-              pid = state.fsm
-              if pid != nil do
-                :gen_fsm.send_event(pid, {state.player.id, type, value})
-              end
               run(state)
             else
+              Logger.info "External Module call begin #{inspect target} operation: #{inspect type}"
               response = Serverutils.call(target,type,value,state)
-              Logger.info "External Module call #{inspect target} operation:#{inspect type} Response: #{inspect response}"
+              Logger.info "External Module call end #{inspect target} operation: #{inspect type} Response: #{inspect response}"
               if response.result_code == :error do
                 Serverutils.send(state.socket, target, type, :error)
               else
