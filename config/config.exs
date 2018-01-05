@@ -2,8 +2,9 @@ use Mix.Config
 
 # Base config
 config :servus,
-  backends: [:connect_four],
-  modules: [Player_Self, Player_Only, HiScore, Player_FB,Player_Userdata]
+  #backends: [:connect_four],
+  backends: [:testModule_1P],
+  modules: [Player_Self, Player_Only, Player_FB,Player_Userdata]
 
 # Configuration for a connect-four game
 config :servus,
@@ -14,6 +15,26 @@ connect_four: %{
   ],
   players_per_game: 2, 
   implementation: ConnectFour
+}
+
+# Configuration for a cardgame
+config :servus,
+cardGame: %{
+  adapters: [
+    tcp: 3334,
+    web: 3335
+  ],
+  players_per_game: 1, 
+  implementation: CardGame
+}
+config :servus,
+testModule_1P: %{
+  adapters: [
+    tcp: 3334,
+    web: 3335
+  ],
+  players_per_game: 1, 
+  implementation: TestModule_1P
 }
 
 config :servus,
@@ -32,7 +53,8 @@ facebook: %{
 
 config :servus,
 player_userdata: %{
-  picturepath: "./save/picture"
+  picturepath: "./save/picture",
+  profilepath: "./save/profiles"
 }
 
 import_config "#{Mix.env}.exs"
