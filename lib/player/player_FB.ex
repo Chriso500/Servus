@@ -2,48 +2,37 @@ defmodule Player_FB do
   @moduledoc """
   
   """
-  alias Servus.Serverutils
-  alias Servus.SQLLITE_DB_Helper
+
+  alias Servus.{Repo, PlayerLogin}
+  alias Servus.{Repo, PlayerUserdata}
   use Servus.Module 
   require Logger
+  import Ecto.Query, only: [from: 2]
 
-  @config Application.get_env(:servus, :database)
   @configFB Application.get_env(:servus, :facebook)
   @configPUD Application.get_env(:servus, :player_userdata)
-  #No Testmode memory for player
-  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
+
   register ["player","fb"]
   @doc """
    Create SQL DB Connection
    Create Table Players @ Startup if needed
    Adds Fiels to Table if needed
   """
-  def startup do
-    Logger.info "Player_FB module registered: #{@db}"
-
-    {:ok, db} = Sqlitex.Server.start_link(@db)
-
-    case Sqlitex.Server.exec(db, "CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT, internalPlayerKey TEXT, facebook_token TEXT, facebook_id TEXT UNIQUE, login_email TEXT UNIQUE,facebook_token_expires NUMBER, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players created FB"
-      {:error, {:sqlite_error, 'table players already exists'}} -> 
-        Logger.info "Table players already exists. Adding new Login Facebook Columns if needed"
-        SQLLITE_DB_Helper.findAndAddMissingColumns(db,[%{columnName: "facebook_token", columnType: "TEXT" },%{columnName: "facebook_id", columnType: "TEXT", constraint: "UNIQUE"},%{columnName: "login_email", columnType: "TEXT UNIQUE" },%{columnName: "facebook_token_expires", columnType: "NUMBER" }],"Players")
-    end
-
-    %{db: db} # Return module state here - db pid is used in handles
+  def startup() do
+    Logger.info "Player_FB module registered"
   end
-  @doc """
-   Check if given Facebook and ID are valid
-   Rund Facebook me with token
-   if token is valid check if id from request and id from functioncall are equal
-  """
+  #@doc """
+  # Check if given Facebook and ID are valid
+  # Rund Facebook me with token
+  # if token is valid check if id from request and id from functioncall are equal
+  #"""
   defp checkFBID(fb_id, token) do
     Logger.info "https://graph.facebook.com/me?fields=id&access_token=#{token}"
     ffb_response = HTTPotion.get "https://graph.facebook.com/v2.5/me?fields=id&access_token=#{token}"
     Logger.info "https://graph.facebook.com/me?fields=id&access_token=#{token}"
     Logger.info "Facebook response to token #{token} response #{ffb_response.body}"
     case ffb_response do
-     %{body: body, headers: ffb_id , status_code: statCode}  ->
+     %{body: body, headers: _ , status_code: _}  ->
       try do
         poison_data = Poison.decode(body, keys: :atoms) 
         case poison_data do
@@ -70,14 +59,14 @@ defmodule Player_FB do
     end
   end
 
-  @doc """
-   Run Facebook Debugtoken to get Token lifetime informations
-  """
+  #@doc """
+  # Run Facebook Debugtoken to get Token lifetime informations
+  #"""
   defp checkToken(token) do
     ffb_response = HTTPotion.get "https://graph.facebook.com/debug_token?input_token=#{token}&access_token=#{@configFB.app_token}"
     Logger.info "Facebook DEBUG TOKEN response to token #{token} response #{ffb_response.body}"
     case ffb_response do
-     %{body: body, headers: ffb_id , status_code: statCode}  ->
+     %{body: body, headers: _ , status_code: _}  ->
       try do
         poison_data = Poison.decode(body, keys: :atoms) 
         case poison_data do
@@ -101,14 +90,14 @@ defmodule Player_FB do
       :wrongFB
     end 
   end
-  @doc """
-   Request a long living token from other clienttoken
-  """
+  #@doc """
+  # Request a long living token from other clienttoken
+  #"""
   defp requestLongToken(token) do
     ffb_response = HTTPotion.get "https://graph.facebook.com/v2.8/oauth/access_token?grant_type=fb_exchange_token&client_id=#{@configFB.app_id}&client_secret=#{@configFB.app_secret}&fb_exchange_token=#{token}"
     Logger.info "Facebook Request new Token with token #{token} response #{ffb_response.body}"
     case ffb_response do
-     %{body: body, headers: ffb_id , status_code: statCode}  ->
+     %{body: body, headers: _ , status_code: _}  ->
       try do
         poison_data = Poison.decode(body, keys: :atoms) 
         case poison_data do
@@ -130,11 +119,11 @@ defmodule Player_FB do
       :wrongFB
     end 
   end
-  @doc """
-   Run Facebook me to get clientinformation like name and mail
-   if id is not null then update the database with the new picture
-  """
-  defp facebookME(token,id,state) do
+  #doc """
+  # Run Facebook me to get clientinformation like name and mail
+  # if id is not null then update the database with the new picture
+  #"""
+  defp facebookME(token,id) do
     ffb_response = HTTPotion.get "https://graph.facebook.com/me?fields=name,email,picture&access_token=#{token}"
     Logger.info "Facebook ME response to token #{token} response #{ffb_response.body}"
     case ffb_response do
@@ -151,9 +140,12 @@ defmodule Player_FB do
               picture_response = HTTPotion.get data.picture.data.url
               case picture_response do
                   %{body: body, headers: _ , status_code: _}  ->
-                  insert_stmt = "insert or replace into player_userdata(id,mainpicture) VALUES (#{id},'main_#{id}')"        
-                  case Sqlitex.Server.exec(state.db, insert_stmt) do 
-                    :ok ->
+                  
+                  newPlayerUserdata = PlayerUserdata.add_PlayerUserdata(%PlayerUserdata{},%{player_id: id ,mainpicture: "main_#{id}"})
+                  response = Repo.insert(newPlayerUserdata)
+                  Logger.info "DB Response for register insert #{inspect response}"
+                  case response do 
+                  {:ok, _} ->
                       case File.open "#{@configPUD.picturepath}/main_#{id}", [:write] do
                         {:ok, file} ->
                           IO.binwrite file,body
@@ -163,11 +155,9 @@ defmodule Player_FB do
                            Logger.info "Other Error: Filewriting?!?"
                           %{result_code: :error, result: nil}
                       end
-
-                      
-                    {:error, {:sqlite_error, error}} -> 
-                      Logger.info "SQL ERROR Happend: #{inspect error}"
-                      %{result_code: :error, result: error}
+                    {:error, responsePL} -> 
+                      Logger.info "SQL ERROR Happend: #{inspect responsePL}"
+                      %{result_code: :error, result: responsePL.errors}
                     _->
                       Logger.info "Other Error?!?"
                       %{result_code: :error, result: nil}
@@ -191,14 +181,14 @@ defmodule Player_FB do
       :wrongFB
     end
   end
-  @doc """
-   Function combines FB functions
-   First check if generall answer is ok (given from function before)
-   if not pass value trough function
-   if :ok check Token for Information
-   if token lasts only less then 1 Month 
-   then request new Long living Token
-  """
+  #@doc """
+  # Function combines FB functions
+  # First check if generall answer is ok (given from function before)
+  # if not pass value trough function
+  # if :ok check Token for Information
+  # if token lasts only less then 1 Month 
+  # then request new Long living Token
+  #"""
   defp checkRequestToken(checkAnswer, actToken) do
     case checkAnswer do
       :ok ->
@@ -236,33 +226,31 @@ defmodule Player_FB do
     fb_resp = checkRequestToken(fb_resp,args.token)
     case fb_resp do
       %{result: :ok, access_token: access_token, expires_at: expires_at } ->
-        fb_me_resp = facebookME(access_token,nil,nil)
+        fb_me_resp = facebookME(access_token,nil)
         case fb_me_resp do
           {:ok, data} ->
-          insert_stmt = "INSERT INTO players(nickname,login_email,facebook_id,facebook_token,facebook_token_expires) VALUES ('#{data.name}','#{data.email}','#{args.fb_id}', '#{access_token}', #{expires_at})"        
-            case Sqlitex.Server.exec(state.db, insert_stmt) do 
-            :ok ->
-              case Sqlitex.Server.query(state.db, "SELECT last_insert_rowid() as id") do
-                {:ok, [result]}  ->
-                  facebookME(access_token,result[:id],state)
-                  Logger.info "Create new player #{data.name} with id #{result[:id]} and mail #{data.email} and facebook_id #{args.fb_id} and token #{access_token} expires_at #{expires_at}"
-                  %{result_code: :ok, result: %{id: result[:id], newToken: access_token}}
-                _ ->
-                  Logger.info "Error Unkown new player #{data.name}  mail #{data.email} and facebook_id #{args.fb_id} and token #{access_token} expires_at #{expires_at}"
-                  %{result_code: :error, result: nil}
-              end
-            {:error, {:constraint, constraint}} ->
-              Logger.info "SQL Contraint Happend: #{inspect constraint}"
-              %{result_code: :error, result: :constraint}
-            {:error, {:sqlite_error, error}} -> 
-              Logger.info "SQL ERROR Happend: #{inspect error}"
-              %{result_code: :error, result: error}
+            newPlayer = PlayerLogin.add_Player_FB(%PlayerLogin{},%{nickname: data.name, email: data.email, facebook_id: args.fb_id, facebook_token: access_token, facebook_token_expires: expires_at})
+            response = Repo.insert(newPlayer)
+            Logger.info "DB Response for register insert #{inspect response}"
+            case response do 
+            {:ok, responsePL} ->
+                Logger.info "Create new player #{data.name} with id #{responsePL.id} and mail #{data.email} and id #{args.fb_id}"
+                #Update Picture for new Player
+                fb_me_resp = facebookME(access_token, responsePL.id)
+                case fb_me_resp do
+                  {:ok, _} ->
+                    %{result_code: :ok, result: %{id: responsePL.id, newToken: access_token}}
+                  _->
+                    Logger.info "FB Error response #{inspect fb_me_resp} adding picture"
+                    %{result_code: :error, result: nil}
+                  end
+            {:error, responsePL} ->
+                Logger.info "Error Create new player #{data.name} and mail #{data.email} and id #{args.fb_id}"
+                %{result_code: :error, result: responsePL.errors}
             _->
-              Logger.info "Other Error?!?"
               %{result_code: :error, result: nil}
             end
         _->
-          Logger.info "adadsd#{inspect fb_me_resp}"
           Logger.info "FB Error response #{inspect fb_me_resp}"
           %{result_code: :error, result: nil}
         end
@@ -288,25 +276,29 @@ defmodule Player_FB do
     Creates Playerobj for Mainloop.
   """
   handle ["login"], %{fb_id: _, token: _} = args , client, state do
-    Logger.info "Player module login_fb id #{args.fb_id} and token #{args.token}"
-    select_stmt = "Select count(*)as anzahl, nickname, id, facebook_id, facebook_token, facebook_token_expires FROM players  where facebook_id = '#{args.fb_id}'"
-    tmp = Sqlitex.Server.query(state.db, select_stmt)
-    #Logger.info "DB TEST #{tmp}"
-    case tmp do 
-      {:ok, [result]}  ->
-        if result[:anzahl] == 1 do
+    Logger.info "Player module login_fb fb_id #{args.fb_id}"
+    query =
+      from(
+        p in PlayerLogin,
+        where: p.facebook_id == ^args.fb_id, 
+        select: %{nickname: p.nickname,id: p.id, facebook_id: p.facebook_id, facebook_token: p.facebook_token, facebook_token_expires: p.facebook_token_expires}
+      )
+    response = Repo.one(query)
+    Logger.info "DB Response for login query #{inspect response}"
+     case response do 
+      %{nickname: nickname,id: id, facebook_id: _, facebook_token: facebook_token, facebook_token_expires: facebook_token_expires}  ->
           if checkFBID(args.fb_id, args.token) ==:ok do
             player = %{
-                      name: result[:nickname],
+                      name: nickname,
                       #Right place for Socket .. Not Sure
                       socket: client.socket, 
                       login_type: :facebook,
-                      id: result[:id]
+                      id: id
                     }
-            Logger.info "Login new player #{result[:nickname]} with id #{result[:id]}"
-            if args.token != result[:facebook_token] do
+            Logger.info "Login new player #{nickname} with id #{id}"
+            if args.token != facebook_token do
               resp = checkToken(args.token)
-              if resp != :wrongFB && resp.timestamp > result[:facebook_token_expires] do
+              if resp != :wrongFB && resp.timestamp > facebook_token_expires do
                 #TBD UPDATE DB
               end
             end
@@ -314,15 +306,17 @@ defmodule Player_FB do
           else
             %{result_code: :ok, result: :id_not_matched_to_token}
           end
-       else
+       nil ->
+          Logger.info "No positive Login player fb_id #{args.fb_id}"
           %{result_code: :ok, result: :id_not_found}
-       end
-      {:error, {:sqlite_error, error}} ->
-        Logger.info "DB ErrorCode #{inspect error}"
-        %{result_code: :error, result: nil} 
       _->
         %{result_code: :error, result: nil}
     end
   end
-
+   @doc """
+    Generic Error Handler
+  """
+  handle _, _ = args , client, state do
+    %{result_code: :error, result: :wrong_function_call}
+  end 
 end

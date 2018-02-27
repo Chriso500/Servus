@@ -3,30 +3,19 @@ defmodule Player_Only do
   
   """  
   alias Servus.Serverutils
+  alias Servus.{Repo, PlayerLogin}
   use Servus.Module 
   require Logger
+  import Ecto.Query, only: [from: 2]
 
-  @config Application.get_env(:servus, :database)
-
-  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
   register ["player","only"]
 
   @doc """
    Create SQL DB Connection
    Create Table Players @ Startup if needed
   """
-  def startup do
-    Logger.info "Player module registered: #{@db}"
-
-    {:ok, db} = Sqlitex.Server.start_link(@db)
-
-    case Sqlitex.Server.exec(db, "CREATE TABLE players (id INTEGER PRIMARY KEY AUTOINCREMENT, nickname TEXT,  internalPlayerKey TEXT, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players created Only"
-      {:error, {:sqlite_error, 'table players already exists'}} -> 
-        Logger.info "Table players already exists"
-    end
-
-    %{db: db} # Return module state here - db pid is used in handles
+  def startup() do
+    Logger.info "Player_only module registered"
   end
 
   @doc """
@@ -34,20 +23,17 @@ defmodule Player_Only do
    Returns unique key and id for Logins etc --> Key should be saved in APP
   """
   handle ["register"], %{nick: _} = args , client, state do
-    playerKey = Serverutils.get_unique_id 
-    insert_stmt = "INSERT INTO players(nickname,internalPlayerKey) VALUES ('#{args.nick}','#{playerKey}')"
-    case Sqlitex.Server.exec(state.db, insert_stmt) do 
-    :ok ->
-      case Sqlitex.Server.query(state.db, "SELECT last_insert_rowid() as id") do
-        {:ok, [result]}  ->
-          Logger.info "Create new player #{args.nick} with id #{result[:id]} and key #{playerKey}"
-          %{result_code: :ok, result: %{id: result[:id], key: playerKey}}
-        {:error, {:sqlite_error, error}} -> 
-          Logger.info "SQL ERROR Happend: #{inspect error}"
-          %{result_code: :error, result: error}
-        _ ->
-          %{result_code: :error, result: nil}
-      end
+    playerKey = Serverutils.get_unique_id(7)
+    newPlayer = PlayerLogin.add_Player_Only(%PlayerLogin{},%{nickname: args.nick, internalPlayerKey: playerKey})
+    response = Repo.insert(newPlayer)
+    Logger.info "DB Response for register insert #{inspect response}"
+    case response do 
+    {:ok, responsePL} ->
+        Logger.info "Create new player #{args.nick} with id #{responsePL.id} and internalPlayerKey #{playerKey}"
+        %{result_code: :ok, result:  %{id: responsePL.id, key: playerKey}}
+    {:error, responsePL} ->
+        Logger.info "Error Create new player #{args.nick} and internalPlayerKey #{playerKey}"
+        %{result_code: :error, result: responsePL.errors}
     _->
       %{result_code: :error, result: nil}
     end
@@ -59,30 +45,36 @@ defmodule Player_Only do
   """
   handle ["login"], %{id: _, key: _} = args , client, state do
     Logger.info "Player module login_only id #{args.id} and key #{args.key}"
-    select_stmt = "Select count(*)as anzahl, nickname, id  FROM players  where id = #{args.id} and internalPlayerKey= '#{args.key}'"
-    tmp = Sqlitex.Server.query(state.db, select_stmt)
-    #Logger.info "DB TEST #{tmp}"
-    case tmp do 
-      {:ok, [result]}  ->
-        if result[:anzahl] == 1 do
-          player = %{
-                    name: result[:nickname],
-                    #Right place for Socket .. Not Sure
-                    socket: client.socket, 
-                    login_type: :key,
-                    id: result[:id]
-                  }
-          Logger.info "Login new player #{result[:nickname]} with id #{result[:id]}"
+    query =
+      from(
+        p in PlayerLogin,
+        where: p.id == ^args.id and p.internalPlayerKey == ^args.key, 
+        select: %{nickname: p.nickname,id: p.id}
+      )
+    response = Repo.one(query)
+    Logger.info "DB Response for login query #{inspect response}"
+    case response do 
+      %{id: id, nickname: nickname}  ->
+        player = %{
+                  name: nickname,
+                  #Right place for Socket .. Not Sure
+                  socket: client.socket, 
+                  login_type: :self,
+                  id: id
+                }
+          Logger.info "Login new player #{nickname} with id #{id}"
           %{result_code: :ok, result: true,  state: Map.put(client, :player, player)}
-       else
+        nil ->
+          Logger.info "No positive Login player #{args.id} with key #{args.key}"
           %{result_code: :ok, result: false}
-       end
-      {:error, {:sqlite_error, error}} ->
-        Logger.info "DB ErrorCode #{inspect error}"
-        %{result_code: :error, result: nil} 
       _->
         %{result_code: :error, result: nil}
     end
   end
-
+   @doc """
+    Generic Error Handler
+  """
+  handle _, _ = args , client, state do
+    %{result_code: :error, result: :wrong_function_call}
+  end 
 end

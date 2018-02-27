@@ -5,7 +5,7 @@ defmodule Servus.Mixfile do
     [app: :servus,
      version: "0.0.1",
      elixir: "~> 1.1",
-     deps: deps]
+     deps: deps()]
   end
 
   # Configuration for the OTP application
@@ -13,7 +13,7 @@ defmodule Servus.Mixfile do
   # Type `mix help compile.app` for more information
   def application do
     [
-      applications: [:crypto, :logger, :httpotion],
+      applications: [:crypto, :logger, :httpotion, :ecto, :postgrex],
       mod: {Servus, []}
     ]
   end
@@ -32,9 +32,10 @@ defmodule Servus.Mixfile do
       {:poison, "~> 3.0"},
       {:socket, "~> 0.3.0"},
       {:exrm, "~> 1.0.8"},
-      {:sqlitex, "~> 1.0"},
       {:junit_formatter, "~> 1.2"},
-      {:httpotion, "~> 3.0.2"}
+      {:httpotion, "~> 3.0.2"},
+      {:postgrex, ">= 0.0.0"},
+      {:ecto, "~> 2.1"}
     ]
   end
 end

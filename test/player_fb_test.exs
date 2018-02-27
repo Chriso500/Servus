@@ -20,12 +20,12 @@ defmodule PlayerFBTest do
 
   test "integration test (TCP) for the Player FB Module with register and login", context do
     #Register new Account
-    assert %{body: body, headers: _ , status_code: _}  = HTTPotion.get "https://graph.facebook.com/v2.8/1216077065136886/accounts/test-users?id=119663468525205&access_token=1216077065136886|yaVQhGi9fzy_N5YchZBH2xQwvzk"
+    assert %{body: body, headers: _ , status_code: _}  = HTTPotion.get "https://graph.facebook.com/v2.8/1216077065136886/accounts/test-users?id=119663468525205&access_token=1216077065136886|0b2b0ff3fde4bbe08fe58cd012904427"
     assert {:ok, data} = Poison.decode(body, keys: :atoms) 
     assert :ok == Serverutils.send(context.alice,["player", "fb"], ["register"], %{fb_id: "119663468525205", token: "#{Enum.at(data.data,0).access_token}" })
     assert {:ok , returnMessage} = Serverutils.recv(context.alice)
     assert {:ok , data} = Poison.decode(returnMessage, as: %Servus.Message {}, keys: :atoms!) 
-    assert %{Value: %{id: 1, newToken: access_token}, Target: _ , Type: _} = data
+    assert %{Value: %{id: _, newToken: access_token}, Target: _ , Type: _} = data
 
   
     #Login test with new account
@@ -53,9 +53,9 @@ defmodule PlayerFBTest do
 
   test "standalone test (sql-functions) for the Player FB Module", context do
     #Register new Account
-    assert %{body: body, headers: _ , status_code: _}  = HTTPotion.get "https://graph.facebook.com/v2.8/1216077065136886/accounts/test-users?id=123818274774430&access_token=1216077065136886|yaVQhGi9fzy_N5YchZBH2xQwvzk"
+    assert %{body: body, headers: _ , status_code: _}  = HTTPotion.get "https://graph.facebook.com/v2.8/1216077065136886/accounts/test-users?id=123818274774430&access_token=1216077065136886|0b2b0ff3fde4bbe08fe58cd012904427"
     assert {:ok, data} = Poison.decode(body, keys: :atoms) 
-    assert %{result: %{id: 2, newToken: access_token}, result_code: :ok, state: nil}=Serverutils.call(["player", "fb"], ["register"], %{fb_id: "123818274774430", token: "#{Enum.at(data.data,1).access_token}"},nil)
+    assert %{result: %{id: _, newToken: access_token}, result_code: :ok, state: nil}=Serverutils.call(["player", "fb"], ["register"], %{fb_id: "123818274774430", token: "#{Enum.at(data.data,1).access_token}"},nil)
     #Login with new account
     assert %{result: true, result_code: :ok, state: _}=Serverutils.call(["player", "fb"], ["login"], %{fb_id: "123818274774430", token: "#{Enum.at(data.data,1).access_token}"},context.alice)
     #Login with new account and wrong id

@@ -8,7 +8,7 @@ defmodule Gamefield do
   instances running
   """
   def start_link do
-    GenServer.start_link(__MODULE__, produce_empty_field)
+    GenServer.start_link(__MODULE__, produce_empty_field())
   end
 
   @doc """
@@ -44,7 +44,7 @@ defmodule Gamefield do
   # Implementation
 
   def handle_cast(:resetGame, _) do
-    {:noreply, produce_empty_field}
+    {:noreply, produce_empty_field()}
   end
 
   def handle_call({:updateField, slot,playerID}, _, gamefield)do

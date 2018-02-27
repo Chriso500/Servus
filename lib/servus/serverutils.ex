@@ -11,7 +11,7 @@ defmodule Servus.Serverutils.TCP do
   """
   def get_address(socket) do
     {:ok, {address, _}} = :inet.peername(socket)
-    address |> Tuple.to_list |> Enum.join "."
+    address |> Tuple.to_list|> Enum.join (".")
   end
 
   @doc """
@@ -150,7 +150,7 @@ defmodule Servus.Serverutils.Web do
         else
           {:ok, data}
         end
-      {:error, reason} ->
+      {:error, _reason} ->
         result
       _ ->
         {:error, :unknown}
@@ -173,8 +173,8 @@ defmodule Servus.Serverutils do
 
   # IDs
   # ###############################################
-  def get_unique_id do
-    :crypto.rand_bytes(32) |> :crypto.bytes_to_integer
+  def get_unique_id(count) do
+    :crypto.strong_rand_bytes(count) |> :crypto.bytes_to_integer
   end
   ##HELPER for md5
   def get_md5_hex(initalString) do

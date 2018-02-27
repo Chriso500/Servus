@@ -27,7 +27,7 @@ defmodule Servus.Module do
       # Callbacks
       # ###############
 
-      def startup do
+      def startup() do
         # Override in user code
         []
       end
@@ -36,7 +36,7 @@ defmodule Servus.Module do
         # Override in user code
       end
 
-      def __register__ do
+      def __register__() do
         # Override or die
         raise "Did you forget to register module  #{__MODULE__}?"
       end
@@ -47,7 +47,7 @@ defmodule Servus.Module do
 
   defmacro register(name) do
     quote do
-      def __register__ do
+      def __register__() do
         Servus.ModuleStore.register(unquote(name), self())
       end
     end

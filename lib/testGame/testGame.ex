@@ -19,13 +19,9 @@ defmodule TestModule_1P do
   Outcome: p2 state
   """
   def redo({id, ["sendData"], data}, state) do
-    #Logger.info "Here: #{inspect data}"
+    Logger.info "Data: #{inspect data} from id: #{inspect id}"
     Serverutils.send(state.player1.socket, ["reSendData"], data)
     {:next_state, :redo, state}
   end
-
-  def finish({ _, ["exit"], _}, state) do
-    Logger.info "Finished Game"
-  end
-
+  
 end

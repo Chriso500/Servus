@@ -2,9 +2,12 @@ use Mix.Config
 
 # Base config
 config :servus,
-  #backends: [:connect_four],
-  backends: [:testModule_1P],
+  backends: [:connect_four],
+  #backends: [:testModule_1P],
   modules: [Player_Self, Player_Only, Player_FB,Player_Userdata]
+
+#Ecto DB
+config :servus, ecto_repos: [Servus.Repo]
 
 # Configuration for a connect-four game
 config :servus,
@@ -16,17 +19,7 @@ connect_four: %{
   players_per_game: 2, 
   implementation: ConnectFour
 }
-
-# Configuration for a cardgame
-config :servus,
-cardGame: %{
-  adapters: [
-    tcp: 3334,
-    web: 3335
-  ],
-  players_per_game: 1, 
-  implementation: CardGame
-}
+#Configuration for a Testmodule
 config :servus,
 testModule_1P: %{
   adapters: [
@@ -35,12 +28,6 @@ testModule_1P: %{
   ],
   players_per_game: 1, 
   implementation: TestModule_1P
-}
-
-config :servus,
-database: %{
-  rootpath: "./db",
-  testmode: ""
 }
 # JUST TEST Credentials!!!! NO Real Key or Application
 config :servus,

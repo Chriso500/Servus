@@ -16,7 +16,8 @@ defmodule Servus.Supervisor do
       worker(Servus.PidStore, []),
       worker(Servus.ModuleStore, []),
       supervisor(Task.Supervisor, [[name: :client_handler]], id: :client_handler),
-      supervisor(Task.Supervisor, [[name: :game_handler]], id: :game_handler)
+      supervisor(Task.Supervisor, [[name: :game_handler]], id: :game_handler),
+      supervisor(Servus.Repo, [])
     ]
 
     # Create a list of all the backends that have to be

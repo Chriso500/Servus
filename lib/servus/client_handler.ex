@@ -4,7 +4,6 @@ defmodule Servus.ClientHandler do
   received via tcp and interpreted as JSON.
   """
   alias Servus.PidStore
-  alias Servus.ModuleStore
   alias Servus.Serverutils
   alias Servus.PlayerQueue
   alias Servus.Serverutils
@@ -16,18 +15,15 @@ defmodule Servus.ClientHandler do
         data = Poison.decode(message, as: %Servus.Message {}, keys: :atoms) 
         Logger.info "Decode: #{inspect data}"
         case data do
-          {:ok, %{Type: ["join"], Value: %{GameName: cardGame, GameMode: normal} }} ->
-            if Map.has_key?(state, :player) do
-              Logger.info "#{state.player.name} has joined the queue"
-              PlayerQueue.push(state.queue, state.player)
-            end
-            run(state)
            {:ok, %{Type: ["join"]}} ->
-            if Map.has_key?(state, :player) do
+            if Map.has_key?(state, :player) and not Map.has_key?(state, :joined) do
               Logger.info "#{state.player.name} has joined the queue"
               PlayerQueue.push(state.queue, state.player)
+              run(Map.put(state, :joined, true))
+            else
+              #Double Login
+              run(state)
             end
-            run(state)
           {:ok, %{Type: type, Target: target, Value: value}} ->
             if target == nil do
                 try do
@@ -40,20 +36,27 @@ defmodule Servus.ClientHandler do
                   pid = state.fsm
                   :gen_fsm.send_event(pid, {state.player.id, type, value})
                 rescue
-                   e in _ -> 
+                   _ ->  
                    Logger.error "External Game call not found and not queued operation: #{inspect type}"
                 end
               run(state)
             else
               Logger.info "External Module call begin #{inspect target} operation: #{inspect type}"
-              response = Serverutils.call(target,type,value,state)
-              Logger.info "External Module call end #{inspect target} operation: #{inspect type} Response: #{inspect response}"
-              if response.result_code == :error do
-                Serverutils.send(state.socket, target, type, :error)
-              else
-                Serverutils.send(state.socket, target, type, response.result)
-              end
-              run(response.state)
+                response = Serverutils.call(target,type,value,state)
+                Logger.info "External Module call end #{inspect target} operation: #{inspect type} Response: #{inspect response}"
+                case response do
+                  :error -> 
+                    Serverutils.send(state.socket, target, type, :generic_module_error)
+                    run(state)
+                  _ ->
+                    case response.result_code do
+                      :error ->
+                        Serverutils.send(state.socket, target, type, %{result: :error, value: response.result})
+                      _ ->
+                        Serverutils.send(state.socket, target, type, response.result)
+                    end
+                    run(response.state)
+                end
             end
           _ ->
             Logger.warn "Invalid message format: #{message}"
@@ -81,7 +84,6 @@ defmodule Servus.ClientHandler do
       _ ->
         Logger.warn "Unexpeted Return from recv func"
     end
-
   end
 end
 

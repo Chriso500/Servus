@@ -13,4 +13,10 @@ defmodule Echo do
     Logger.info "Echo module called"
     args
   end
+   @doc """
+    Generic Error Handler
+  """
+  handle _, _ = args , client, state do
+    %{result_code: :error, result: :wrong_function_call}
+  end 
 end

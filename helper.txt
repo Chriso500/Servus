@@ -1,7 +1,0 @@
-> lists all functions (http://elixir-lang.org/docs/stable/elixir/Module.html#__info__/1)
-ConnectFour.__info__(:functions)
-> lists all attributes
-ConnectFour.__info__(:attributes)
-
-> show variable content
-IO.inspect var1

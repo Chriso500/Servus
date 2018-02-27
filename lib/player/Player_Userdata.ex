@@ -2,59 +2,53 @@ defmodule Player_Userdata do
   @moduledoc """
   
   """
-  alias Servus.Serverutils
-  alias Servus.SQLLITE_DB_Helper
+  alias Servus.{Repo, PlayerUserdata}
   use Servus.Module 
   require Logger
+  import Ecto.Query, only: [from: 2]
 
-  @config Application.get_env(:servus, :database)
   @configPUD Application.get_env(:servus, :player_userdata)
       #No Testmode memory for player
-  @db "file:#{@config.rootpath}/player.sqlite3#{@config.testmode}"
   register ["player","userdata"]
   @doc """
    Create SQL DB Connection
    Create Table Players @ Startup if needed
    Adds Fiels to Table if needed
   """
-  def startup do
-    Logger.info "Player_userdata module registered: #{@db}"
-
-    {:ok, db} = Sqlitex.Server.start_link(@db)
-
-    case Sqlitex.Server.exec(db, "CREATE TABLE player_userdata (id INTEGER UNIQUE, mainpicture Text, created_on INTEGER DEFAULT CURRENT_TIMESTAMP)") do
-      :ok -> Logger.info "Table players_userdata created"
-      {:error, {:sqlite_error, 'table player_userdata already exists'}} -> 
-        Logger.info "Table player_userdata already exists."
-        end
-    %{db: db} # Return module state here - db pid is used in handles
+  def startup() do
+    Logger.info "Player_userdata module registered"
   end
 
    handle ["picture"], %{internal_user_id: _} = args , client, state do
-    #TBD Logincheck
-    #Logger.info "Player module login_fb id #{args.fb_id} and token #{args.token}"
-    select_stmt = "Select count(*)as anzahl, id, mainpicture FROM player_userdata where id = '#{args.internal_user_id}'"
-    tmp = Sqlitex.Server.query(state.db, select_stmt)
-    #Logger.info "DB TEST #{tmp}"
-    case tmp do 
-      {:ok, [result]}  ->
-        if result[:anzahl] == 1 do
-          case File.read "#{@configPUD.picturepath}/#{result[:mainpicture]}" do
+    Logger.info "FB_Picutre for id #{args.internal_user_id}"
+    query =
+      from(
+        pU in PlayerUserdata,
+        where: pU.player_id == ^args.internal_user_id, 
+        select: %{mainpicture: pU.mainpicture,player_id: pU.player_id}
+      )
+    response = Repo.one(query)
+    Logger.info "DB Response for player_userdata query #{inspect response}"
+    case response do 
+      %{mainpicture: mainpicture, player_id: id}  ->
+          case File.read "#{@configPUD.picturepath}/#{mainpicture}" do
             {:ok, fileRawValue} ->
               Logger.info "Fileread complete"
-              %{result_code: :ok, result:  %{id: result[:id], picture: :binary.bin_to_list(fileRawValue)}}
+              %{result_code: :ok, result:  %{id: id, picture: :binary.bin_to_list(fileRawValue)}}
             _->
                Logger.info "Other Error: Filereading?!?"
               %{result_code: :ok, result: :no_pic_for_id_file_error}
           end
-        else
+        nil ->
           %{result_code: :ok, result: :no_pic_for_id}
-        end
-      {:error, {:sqlite_error, error}} ->
-        Logger.info "DB ErrorCode #{inspect error}"
-        %{result_code: :error, result: nil} 
       _->
         %{result_code: :error, result: nil}
     end
   end
+   @doc """
+    Generic Error Handler
+  """
+  handle _, _ = args , client, state do
+    %{result_code: :error, result: :wrong_function_call}
+  end 
 end
